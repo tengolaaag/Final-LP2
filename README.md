@@ -1,2 +1,9 @@
 # Final-LP2
-Un grupo responsable y, sobre todo, PUNTUAL
+Integrantes
+
+Aizaac23 --> Isaac Ñaupa Celis
+
+Dinor15 --> Manolo Meza Rodríguez
+
+tengolaaag --> Bruno Candiotti Neyra
+
