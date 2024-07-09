@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Descubre las mejores películas de todos los tiempos según IMDb.">
+    <meta name="keywords" content="Top 100 Películas, IMDb, Mejores Películas">
     <title>Top 100 Películas IMDb</title>
     <style>
         body {
@@ -113,57 +115,82 @@
             const url = `https://imdb-top-100-movies.p.rapidapi.com/`;
 
             const headers = {
-                "x-rapidapi-key": "8e29eef374msh5ec287f6365e2ecp14d1e2jsnbff1b1f1110d",
+                "x-rapidapi-key": "6e6fca29d2msh2d1ed4093c0d6cdp1c72a3jsn906a6e4ae54f",
                 "x-rapidapi-host": "imdb-top-100-movies.p.rapidapi.com"
             };
 
             fetch(url, { headers: headers })
                 .then(response => response.json())
                 .then(data => {
-                    displayResults(data, query);
+                    const movie = findMovie(data, query);
+                    if (movie) {
+                        displayMovie(movie);
+                    } else {
+                        document.getElementById('results').innerHTML = '<p>No se encontraron películas.</p>';
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
+                    document.getElementById('results').innerHTML = '<p>Error al obtener los datos. Por favor, inténtalo de nuevo más tarde.</p>';
                 });
         }
 
-        function displayResults(data, query) {
-            const resultsContainer = document.getElementById('results');
-            resultsContainer.innerHTML = '';
-
-            let filteredMovies = [];
-            if (!isNaN(query)) {
-                // Si el query es un número, buscar por puesto
-                filteredMovies = data.filter(movie => movie.rank == query);
-            } else {
-                // Si el query es un texto, buscar por nombre
-                filteredMovies = data.filter(movie => movie.title.toLowerCase().includes(query.toLowerCase()));
+        function findMovie(movies, searchTerm) {
+            for (let movie of movies) {
+                if (String(movie.rank) === searchTerm || movie.title.toLowerCase() === searchTerm.toLowerCase()) {
+                    return movie;
+                }
             }
+            return null;
+        }
 
-            if (filteredMovies.length > 0) {
-                filteredMovies.forEach(movie => {
-                    const movieElement = document.createElement('div');
-                    movieElement.classList.add('movie');
-                    movieElement.innerHTML = `
-                        <img src="${movie.image || '#'}" alt="Imagen de ${movie.title}">
-                        <div class="movie-details">
-                            <h3>Título: ${movie.title}</h3>
-                            <p>Puesto: ${movie.rank}</p>
-                            <p>Año: ${movie.year}</p>
-                            <p>Calificación: ${movie.rating}</p>
-                            <p>Duración: ${movie.duration || 'No disponible'} minutos</p>
-                            <p>Géneros: ${movie.genre || 'No disponible'}</p>
-                            <p>Descripción: ${movie.description || 'No disponible'}</p>
-                            <p>Director: ${movie.director || 'No disponible'}</p>
-                            <p>Elenco: ${movie.actors ? movie.actors.join(', ') : 'No disponible'}</p>
-                            <p><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + ' trailer')}&autoplay=1" target="_blank">Ver Trailer</a></p>
-                        </div>
-                    `;
-                    resultsContainer.appendChild(movieElement);
+        function getStreamingAvailability(imdbId) {
+            const url = `https://streaming-availability.p.rapidapi.com/get/basic?country=us&imdb_id=${imdbId}`;
+
+            const headers = {
+                "x-rapidapi-key": "6e6fca29d2msh2d1ed4093c0d6cdp1c72a3jsn906a6e4ae54f",
+                "x-rapidapi-host": "streaming-availability.p.rapidapi.com"
+            };
+
+            return fetch(url, { headers: headers })
+                .then(response => response.json())
+                .catch(error => {
+                    console.error('Error:', error);
+                    return {};
                 });
-            } else {
-                resultsContainer.innerHTML = '<p>No se encontraron películas.</p>';
-            }
+        }
+
+        async function displayMovie(movie) {
+            const streamingData = await getStreamingAvailability(movie.imdbid);
+            const platforms = [...new Set((streamingData.streamingOptions?.us || []).map(service => service.service.name))];
+            const movieDetails = {
+                Year: movie.year,
+                Director: streamingData.directors || 'N/A',
+                ImageURL: movie.image,
+                Rating: movie.rating,
+                AvailableOn: platforms.length > 0 ? platforms.join(', ') : 'N/A'
+            };
+
+            const movieElement = document.createElement('div');
+            movieElement.classList.add('movie');
+            movieElement.innerHTML = `
+                <img src="${movieDetails.ImageURL}" alt="Imagen de ${movie.title}">
+                <div class="movie-details">
+                    <h3>Título: ${movie.title}</h3>
+                    <p>Puesto: ${movie.rank}</p>
+                    <p>Año: ${movieDetails.Year}</p>
+                    <p>Calificación: ${movieDetails.Rating}</p>
+                    <p>Director: ${movieDetails.Director}</p>
+                    <p>Disponible en: ${movieDetails.AvailableOn}</p>
+                    <p>Duración: ${movie.duration || 'No disponible'} minutos</p>
+                    <p>Géneros: ${movie.genre || 'No disponible'}</p>
+                    <p>Descripción: ${movie.description || 'No disponible'}</p>
+                    <p>Elenco: ${movie.actors ? movie.actors.join(', ') : 'No disponible'}</p>
+                    <p><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + ' trailer')}&autoplay=1" target="_blank">Ver Trailer</a></p>
+                </div>
+            `;
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('results').appendChild(movieElement);
         }
     </script>
 </body>
