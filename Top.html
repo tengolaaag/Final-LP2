@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Descubre las mejores películas de todos los tiempos según IMDb.">
+    <meta name="keywords" content="Top 100 Películas, IMDb, Mejores Películas">
+    <title>Top 100 Películas IMDb</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            text-align: center;
+        }
+        header {
+            background-color: #e74c3c;
+            width: 100%;
+            padding: 20px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        header p {
+            margin: 10px 0 0;
+            font-size: 1.2rem;
+        }
+        #search-form {
+            display: flex;
+            margin-top: 20px;
+        }
+        #search-input {
+            padding: 10px;
+            font-size: 1rem;
+            width: 300px;
+            border: none;
+            border-radius: 5px;
+        }
+        #search-button {
+            padding: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            margin-left: 10px;
+            background-color: #e74c3c;
+            color: white;
+        }
+        #results {
+            width: 80%;
+            max-width: 800px;
+            background-color: #34495e;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .movie {
+            display: flex;
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            border-radius: 10px;
+        }
+        .movie img {
+            max-width: 150px;
+            border-radius: 10px;
+            margin-right: 20px;
+        }
+        .movie-details {
+            text-align: left;
+        }
+        .movie-details h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.5rem;
+            color: #e74c3c;
+        }
+        .movie-details p {
+            margin: 5px 0;
+        }
+        .movie-details a {
+            color: #e74c3c;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Top 100 Películas IMDb</h1>
+        <p>Encuentra las mejores películas de todos los tiempos</p>
+    </header>
+    <form id="search-form">
+        <input type="text" id="search-input" placeholder="Escribe el puesto o nombre de la película..." required>
+        <button type="submit" id="search-button">Buscar</button>
+    </form>
+    <div id="results"></div>
+
+    <script>
+        document.getElementById('search-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const query = document.getElementById('search-input').value;
+            searchMovie(query);
+        });
+
+        const apiKey1 = "38e65580ffmsh55d6f1788db421ap1ff5b0jsn3f9029414f2f";
+        const apiKey2 = "38e65580ffmsh55d6f1788db421ap1ff5b0jsn3f9029414f2f";
+
+        async function getMovies() {
+            const url = "https://imdb-top-100-movies.p.rapidapi.com/";
+            const response = await fetch(url, {
+                headers: {
+                    "x-rapidapi-key": apiKey1,
+                    "x-rapidapi-host": "imdb-top-100-movies.p.rapidapi.com"
+                }
+            });
+            if (response.ok) {
+                return response.json();
+            } else {
+                console.error("Error al obtener los datos:", response.status);
+                return null;
+            }
+        }
+
+        async function getStreamingAvailability(imdbId) {
+            const url = `https://streaming-availability.p.rapidapi.com/shows/${imdbId}`;
+            const response = await fetch(url, {
+                headers: {
+                    "x-rapidapi-key": apiKey2,
+                    "x-rapidapi-host": "streaming-availability.p.rapidapi.com"
+                }
+            });
+            return response.json();
+        }
+
+        async function searchMovie(query) {
+            const movies = await getMovies();
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = '';
+
+            if (movies) {
+                let filteredMovies = [];
+                if (!isNaN(query)) {
+                    filteredMovies = movies.filter(movie => movie.rank == query);
+                } else {
+                    filteredMovies = movies.filter(movie => movie.title.toLowerCase().includes(query.toLowerCase()));
+                }
+
+                if (filteredMovies.length > 0) {
+                    for (const movie of filteredMovies) {
+                        const imdbId = movie.imdbid;
+                        const streamingData = await getStreamingAvailability(imdbId);
+                        const platforms = [...new Set((streamingData.streamingOptions?.us || []).map(service => service.service.name))];
+
+                        const movieElement = document.createElement('div');
+                        movieElement.classList.add('movie');
+                        movieElement.innerHTML = `
+                            <img src="${movie.image || '#'}" alt="Imagen de ${movie.title}">
+                            <div class="movie-details">
+                                <h3>Título: ${movie.title}</h3>
+                                <p>Puesto: ${movie.rank}</p>
+                                <p>Año: ${movie.year}</p>
+                                <p>Calificación: ${movie.rating}</p>
+                                <p>Duración: ${movie.duration || 'No disponible'} minutos</p>
+                                <p>Géneros: ${movie.genre || 'No disponible'}</p>
+                                <p>Descripción: ${movie.description || 'No disponible'}</p>
+                                <p>Director: ${movie.director || 'No disponible'}</p>
+                                <p>Elenco: ${movie.actors ? movie.actors.join(', ') : 'No disponible'}</p>
+                                <p>Disponible en: ${platforms.join(', ') || 'N/A'}</p>
+                                <p><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + ' trailer')}&autoplay=1" target="_blank">Ver Trailer</a></p>
+                            </div>
+                        `;
+                        resultsContainer.appendChild(movieElement);
+                    }
+                } else {
+                    resultsContainer.innerHTML = '<p>No se encontraron películas.</p>';
+                }
+            } else {
+                resultsContainer.innerHTML = '<p>Error al obtener los datos de las películas.</p>';
+            }
+        }
+    </script>
+</body>
+</html>
